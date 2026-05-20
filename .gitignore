@@ -28,3 +28,10 @@ Desktop.ini
 decoded_*
 stego_*
 *.bin
+
+# Sensitive files to exclude from repository
+secret.txt
+input.jpg
+stego_image.png
+web-app-security.md
+security-tools.md
