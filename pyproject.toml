@@ -1,0 +1,14 @@
+[project]
+name = "pygano"
+version = "0.0.1"
+description = "Python implementation of gano, an ensemble steganography tool."
+readme = "README.md"
+requires-python = ">= 3.12"
+
+dependencies = [
+	"pillow >= 11.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
