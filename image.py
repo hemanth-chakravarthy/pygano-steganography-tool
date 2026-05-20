@@ -4,8 +4,8 @@ from pathlib import Path
 from itertools import chain, batched
 
 # Supported formats
-SUPPORTED_INPUT_FORMATS = {"PNG", "BMP", "TIFF", "GIF", "JPEG", "MPO"}
-SUPPORTED_OUTPUT_FORMATS = {"PNG", "BMP", "TIFF"}
+SUPPORTED_INPUT_FORMATS = {"PNG", "BMP", "TIFF", "GIF", "JPEG", "MPO", "WEBP"}
+SUPPORTED_OUTPUT_FORMATS = {"PNG", "BMP", "TIFF", "WEBP"}
 LSB_COUNT = 2
 
 

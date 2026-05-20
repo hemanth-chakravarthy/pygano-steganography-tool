@@ -4,16 +4,16 @@
 
 It ships with a **100% client-side web interface** — no server, no uploads, complete privacy — deployed live at:
 
-> **🔗 [https://pygano-steganography-tool-6l33.vercel.app/](https://pygano-steganography-tool-6l33.vercel.app/)**
+> **[https://pygano-steganography-tool-6l33.vercel.app/](https://pygano-steganography-tool-6l33.vercel.app/)**
 
 ---
 
 ## Features
 
 - **Multi-Format Support**:
-  - 🖼️ **Images**: Hide secrets in PNG, BMP, JPG/JPEG, TIFF, GIF containers.
-  - 🔊 **Audio**: Hide secrets in WAV/WAVE audio files.
-  - 📝 **Plain Text**: Hide secrets inside `.txt` files using invisible zero-width Unicode characters (ZWSP).
+  - **Images**: Hide secrets in PNG, BMP, JPG/JPEG, TIFF, GIF containers.
+  - **Audio**: Hide secrets in WAV/WAVE audio files.
+  - **Plain Text**: Hide secrets inside `.txt` files using invisible zero-width Unicode characters (ZWSP).
 - **Web Interface**: Fully serverless browser-based UI — drag & drop files, encode, and download your stego output, all without leaving your browser.
 - **Auto File-Type Detection**: Automatically detects the container type (image, audio, text) when you drop a file — no manual selection required.
 - **Real-Time Capacity Gauge**: Shows how much of the container's steganographic capacity your secret payload uses.
@@ -170,5 +170,5 @@ To deploy your own fork:
 - [x] Auto file-type detection in the web UI
 - [x] Security hardening (CSP, input validation, proper error handling)
 - [x] Vercel deployment
-- [ ] Support other lossless audio formats (FLAC)
-- [ ] Support more lossless image formats
+- [x] FLAC audio support — Python CLI (via soundfile) + Web UI (via AudioContext PCM decode)
+- [x] Lossless WebP image input/output support — Python CLI + Web UI

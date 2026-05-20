@@ -14,11 +14,12 @@ Options:
 """)
 
 
-IMAGE_SUFFIXES = [".png", ".bmp", ".jpg", ".jpeg"]
+IMAGE_SUFFIXES = [".png", ".bmp", ".jpg", ".jpeg", ".webp"]
 AUDIO_SUFFIXES = [
     ".wav",
     ".wave",
-]  # ".flac"]
+    ".flac",
+]
 
 
 

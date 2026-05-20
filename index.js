@@ -158,16 +158,16 @@ function textDecode(mediumText) {
 // --- 4. WAV Audio Parser ---
 function parseWav(arrayBuffer) {
     const bytes = new Uint8Array(arrayBuffer);
-    if (bytes[0] !== 0x52 || bytes[1] !== 0x49 || bytes[2] !== 0x46 || bytes[3] !== 0x46) { // "RIFF"
+    if (bytes[0] !== 0x52 || bytes[1] !== 0x49 || bytes[2] !== 0x46 || bytes[3] !== 0x46) {
         throw new Error("Invalid WAV file: missing RIFF header");
     }
-    if (bytes[8] !== 0x57 || bytes[9] !== 0x41 || bytes[10] !== 0x56 || bytes[11] !== 0x45) { // "WAVE"
+    if (bytes[8] !== 0x57 || bytes[9] !== 0x41 || bytes[10] !== 0x56 || bytes[11] !== 0x45) {
         throw new Error("Invalid WAV file: missing WAVE format");
     }
 
     let dataOffset = -1;
     for (let i = 12; i < bytes.length - 8; i++) {
-        if (bytes[i] === 0x64 && bytes[i+1] === 0x61 && bytes[i+2] === 0x74 && bytes[i+3] === 0x61) { // "data"
+        if (bytes[i] === 0x64 && bytes[i+1] === 0x61 && bytes[i+2] === 0x74 && bytes[i+3] === 0x61) {
             dataOffset = i;
             break;
         }
@@ -178,7 +178,7 @@ function parseWav(arrayBuffer) {
     }
 
     const view = new DataView(arrayBuffer);
-    const dataSize = view.getUint32(dataOffset + 4, true); // Little endian
+    const dataSize = view.getUint32(dataOffset + 4, true);
     const samplesOffset = dataOffset + 8;
 
     const actualDataSize = bytes.length - samplesOffset;
@@ -186,11 +186,76 @@ function parseWav(arrayBuffer) {
         throw new Error("Invalid WAV file: data chunk size header exceeds file bounds.");
     }
 
+    return { bytes, samplesOffset, dataSize };
+}
+
+// --- 5. FLAC Audio Engine (AudioContext-based, no external library) ---
+// Decodes a FLAC ArrayBuffer to a flat Int16 sample array using AudioContext.
+// This is lossless for 16-bit FLAC files and compatible with the Python CLI encoder.
+async function decodeFlacToInt16Samples(arrayBuffer) {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const bufferCopy = arrayBuffer.slice(0); // decodeAudioData may detach the buffer
+    let audioBuffer;
+    try {
+        audioBuffer = await audioCtx.decodeAudioData(bufferCopy);
+    } catch(e) {
+        throw new Error("Could not decode FLAC file. Ensure the browser supports FLAC audio.");
+    } finally {
+        audioCtx.close();
+    }
+
+    const channels = audioBuffer.numberOfChannels;
+    const numSamples = audioBuffer.length;
+    // Interleave channels: [L0, R0, L1, R1, ...] — matches soundfile always_2d flatten order
+    const flat = [];
+    for (let i = 0; i < numSamples; i++) {
+        for (let c = 0; c < channels; c++) {
+            const f32 = audioBuffer.getChannelData(c)[i];
+            // Convert float32 [-1, 1] to int16 [-32768, 32767]
+            const s16 = Math.max(-32768, Math.min(32767, Math.round(f32 * 32768)));
+            flat.push(s16);
+        }
+    }
     return {
-        bytes: bytes,
-        samplesOffset: samplesOffset,
-        dataSize: dataSize
+        samples: flat,
+        sampleRate: audioBuffer.sampleRate,
+        channels,
+        numSamples
     };
+}
+
+// Encodes a flat Int16 sample array to a WAV ArrayBuffer.
+// Used when hiding a secret inside a FLAC file — output is WAV (lossless).
+function encodeSamplesToWav(flat, sampleRate, channels) {
+    const numSamples = flat.length;
+    const bytesPerSample = 2; // int16
+    const dataSize = numSamples * bytesPerSample;
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(buffer);
+
+    const writeStr = (offset, str) => {
+        for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+    };
+
+    writeStr(0, "RIFF");
+    view.setUint32(4, 36 + dataSize, true);
+    writeStr(8, "WAVE");
+    writeStr(12, "fmt ");
+    view.setUint32(16, 16, true);              // PCM chunk size
+    view.setUint16(20, 1, true);               // PCM format
+    view.setUint16(22, channels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * channels * bytesPerSample, true); // byte rate
+    view.setUint16(32, channels * bytesPerSample, true); // block align
+    view.setUint16(34, 16, true);              // bits per sample
+    writeStr(36, "data");
+    view.setUint32(40, dataSize, true);
+
+    for (let i = 0; i < flat.length; i++) {
+        view.setInt16(44 + i * 2, flat[i], true);
+    }
+
+    return buffer;
 }
 
 // --- 5. UI Controller State ---
@@ -342,9 +407,9 @@ document.addEventListener("DOMContentLoaded", () => {
         let detectedType = null;
         if (ext === "txt") {
             detectedType = "text";
-        } else if (ext === "wav" || ext === "wave") {
+        } else if (ext === "wav" || ext === "wave" || ext === "flac") {
             detectedType = "audio";
-        } else if (["png", "bmp", "jpg", "jpeg", "tiff", "gif"].includes(ext)) {
+        } else if (["png", "bmp", "jpg", "jpeg", "tiff", "gif", "webp"].includes(ext)) {
             detectedType = "image";
         }
 
@@ -370,22 +435,42 @@ document.addEventListener("DOMContentLoaded", () => {
             };
             reader.readAsDataURL(file);
         } else if (mediumType === "audio") {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const wav = parseWav(e.target.result);
-                    previewMedium.innerHTML = `<audio controls src="${URL.createObjectURL(file)}"></audio>`;
-                    previewMedium.classList.remove("hidden");
-                    // Compute capacity: WAV data sample bytes * LSB_COUNT bits minus size header, converted to bytes
-                    const totalBits = wav.dataSize * LSB_COUNT;
-                    maxCapacityBytes = Math.floor((totalBits - 64) / 8);
+            const audioExt = file.name.split('.').pop().toLowerCase();
+            // Show the audio player immediately (browsers play both WAV and FLAC natively)
+            previewMedium.innerHTML = `<audio controls src="${URL.createObjectURL(file)}"></audio>`;
+            previewMedium.classList.remove("hidden");
+
+            if (audioExt === "flac") {
+                // Async capacity calculation for FLAC via AudioContext
+                showStatus("Analysing FLAC file...", "info");
+                file.arrayBuffer().then(buf =>
+                    decodeFlacToInt16Samples(buf)
+                ).then(({ samples }) => {
+                    maxCapacityBytes = Math.floor(((samples.length * LSB_COUNT) - 64) / 8);
                     updateSecretAndCapacity();
-                } catch (err) {
-                    showStatus(err.message, "error");
-                    resetMediumUpload();
-                }
-            };
-            reader.readAsArrayBuffer(file);
+                    clearStatus();
+                }).catch(err => {
+                    showStatus("Could not read FLAC capacity: " + err.message, "error");
+                    maxCapacityBytes = -1;
+                    updateSecretAndCapacity();
+                });
+            } else {
+                // WAV: parse synchronously to read the exact data-chunk size
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const wav = parseWav(e.target.result);
+                        const totalBits = wav.dataSize * LSB_COUNT;
+                        maxCapacityBytes = Math.floor((totalBits - 64) / 8);
+                        updateSecretAndCapacity();
+                    } catch (err) {
+                        showStatus(err.message, "error");
+                        resetMediumUpload();
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+
         } else if (mediumType === "text") {
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -418,9 +503,9 @@ document.addEventListener("DOMContentLoaded", () => {
         let detectedType = null;
         if (ext === "txt") {
             detectedType = "text";
-        } else if (ext === "wav" || ext === "wave") {
+        } else if (ext === "wav" || ext === "wave" || ext === "flac") {
             detectedType = "audio";
-        } else if (["png", "bmp", "jpg", "jpeg", "tiff", "gif"].includes(ext)) {
+        } else if (["png", "bmp", "jpg", "jpeg", "tiff", "gif", "webp"].includes(ext)) {
             detectedType = "image";
         }
 
@@ -562,12 +647,35 @@ document.addEventListener("DOMContentLoaded", () => {
                         showStatus("Encoding complete! Your stego PNG image has been downloaded.", "success");
                     }, "image/png");
 
+        // FLAC: decode with AudioContext, encode with WAV output
+                } else if (mediumType === "audio" && uploadedMediumFile.name.toLowerCase().endsWith(".flac")) {
+                    showStatus("Decoding FLAC audio, please wait...", "info");
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        try {
+                            const { samples, sampleRate, channels } = await decodeFlacToInt16Samples(e.target.result);
+                            const capacity = Math.floor(((samples.length * LSB_COUNT) - 64) / 8);
+                            if (secretBytesToEncode.length > capacity) {
+                                showStatus(`Secret too large for this FLAC container (max ${formatBytes(capacity)}).`, "error");
+                                return;
+                            }
+                            lsbEncodeSized(samples, secretBytesToEncode, LSB_COUNT);
+                            const wavBuffer = encodeSamplesToWav(samples, sampleRate, channels);
+                            const blob = new Blob([wavBuffer], { type: "audio/wav" });
+                            const outName = getFilenameWithoutExtension(uploadedMediumFile.name) + "_stego.wav";
+                            triggerDownload(blob, outName);
+                            showStatus("Encoding complete! FLAC was processed and downloaded as a lossless WAV file.", "success");
+                        } catch (err) {
+                            showStatus(`FLAC encoding failed: ${err.message}`, "error");
+                        }
+                    };
+                    reader.readAsArrayBuffer(uploadedMediumFile);
+
                 } else if (mediumType === "audio") {
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         try {
                             const wav = parseWav(e.target.result);
-                            // Get a view of the audio samples
                             const samplesView = wav.bytes.subarray(wav.samplesOffset, wav.samplesOffset + wav.dataSize);
                             lsbEncodeSized(samplesView, secretBytesToEncode, LSB_COUNT);
 
@@ -631,6 +739,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     const decodedBytes = lsbDecodeSized(rgb, LSB_COUNT);
                     handleDecodedOutput(decodedBytes);
+
+                } else if (selectMode === "audio" && fileInput.name.toLowerCase().endsWith(".flac")) {
+                    // FLAC decode via AudioContext
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        try {
+                            const { samples } = await decodeFlacToInt16Samples(e.target.result);
+                            const decodedBytes = lsbDecodeSized(samples, LSB_COUNT);
+                            handleDecodedOutput(decodedBytes);
+                        } catch (err) {
+                            showStatus(`FLAC decoding failed: ${err.message}`, "error");
+                        }
+                    };
+                    reader.readAsArrayBuffer(fileInput);
 
                 } else if (selectMode === "audio") {
                     const reader = new FileReader();
