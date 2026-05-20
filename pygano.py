@@ -33,14 +33,16 @@ def get_steganography_kind_from_medium_file(medium_file: Path):
 
 
 def encode(medium_file: Path, secret_file: Path, output_file: Path):
-    assert medium_file.is_file(), f"Medium file {medium_file} doesn't exist"
-    if str(output_file) != "-":
-        assert not output_file.exists(), f"Output file {output_file} already exists"
-    if str(secret_file) != "-":
-        assert Path(secret_file).is_file(), f"Secret file {secret_file} doesn't exist"
+    if not medium_file.is_file():
+        raise FileNotFoundError(f"Medium file {medium_file} doesn't exist")
+    if str(output_file) != "-" and output_file.exists():
+        raise FileExistsError(f"Output file {output_file} already exists")
+    if str(secret_file) != "-" and not Path(secret_file).is_file():
+        raise FileNotFoundError(f"Secret file {secret_file} doesn't exist")
 
     kind = get_steganography_kind_from_medium_file(medium_file)
-    assert kind is not None, f"Medium file {medium_file} is not of valid format"
+    if kind is None:
+        raise ValueError(f"Medium file {medium_file} is not of valid format")
 
     match kind:
         case "TEXT":
@@ -52,11 +54,13 @@ def encode(medium_file: Path, secret_file: Path, output_file: Path):
 
 
 def decode(medium_file: Path, output_file: Path):
-    assert medium_file.is_file(), f"Medium file {medium_file} doesn't exist"
-    if str(output_file) != "-":
-        assert not output_file.exists(), f"Output file {output_file} already exists"
+    if not medium_file.is_file():
+        raise FileNotFoundError(f"Medium file {medium_file} doesn't exist")
+    if str(output_file) != "-" and output_file.exists():
+        raise FileExistsError(f"Output file {output_file} already exists")
     kind = get_steganography_kind_from_medium_file(medium_file)
-    assert kind is not None, f"Medium file {medium_file} is not of valid format"
+    if kind is None:
+        raise ValueError(f"Medium file {medium_file} is not of valid format")
 
     match kind:
         case "TEXT":

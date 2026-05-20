@@ -29,7 +29,8 @@ class BitQueue:
             self.r += 1
 
     def pop(self, count: int = 1) -> int:
-        assert self.r - self.l >= count, "Not enough bits in the buffer"
+        if self.r - self.l < count:
+            raise ValueError("Not enough bits in the buffer")
         accumulator = 0
         for _ in range(count):
             accumulator <<= 1

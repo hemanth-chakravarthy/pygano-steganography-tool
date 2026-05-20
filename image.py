@@ -29,10 +29,12 @@ def image_lsb_encode(medium_file: Path, secret_file: Path, output_file: Path):
 
         medium_image = medium_image.convert("RGB")
         image_data = list(chain.from_iterable(medium_image.getdata()))
-        assert len(image_data) == medium_image.width * medium_image.height * 3
+        if len(image_data) != medium_image.width * medium_image.height * 3:
+            raise ValueError("Pixel data dimensions mismatch.")
         secret_data = secret_file.read()
         lsb_encode_sized(image_data, secret_data, count=LSB_COUNT)
-        assert len(image_data) == medium_image.width * medium_image.height * 3
+        if len(image_data) != medium_image.width * medium_image.height * 3:
+            raise ValueError("Encoded pixel data size corrupted.")
 
         with Image.new(medium_image.mode, medium_image.size) as output_image:
             output_image.putdata(list(batched(image_data, 3)))

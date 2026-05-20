@@ -26,9 +26,18 @@ def lsb_decode(medium: MutableSequence[int], /, *, count: int) -> BitQueue:
 
 def lsb_decode_sized(medium: MutableSequence[int], /, *, count: int) -> BitQueue:
     size_bytes = 8 * 8 // count
+    if len(medium) < size_bytes:
+        raise ValueError("Medium container is too small to contain a secret size header.")
     size_medium, medium = medium[:size_bytes], medium[size_bytes:]
     size_queue = lsb_decode(size_medium, count=count)
     size = size_queue.pop(8 * 8)
+
+    total_bytes_needed = (size + count - 1) // count
+    if len(medium) < total_bytes_needed:
+        raise ValueError(
+            f"Data corruption detected: medium contains only {len(medium)} samples, "
+            f"but size header specifies {total_bytes_needed} samples."
+        )
 
     secret = BitQueue()
     for i in range(len(medium)):

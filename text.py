@@ -32,6 +32,8 @@ def text_encode(medium_file: Path, secret_file: Path, output_file: Path):
 def text_decode(medium_file: Path, output_file: Path):
     medium_data = medium_file.read_text()
     idxs = [CHARMAP.index(c) for c in medium_data if c in CHARMAP]
+    if not idxs:
+        raise ValueError("No hidden message found in this text container.")
     q = BitQueue()
     for idx in idxs:
         q.extend(idx, 2)

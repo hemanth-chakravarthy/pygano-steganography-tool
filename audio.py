@@ -17,10 +17,8 @@ def write_wave(file, params, frames):
 
 
 def audio_lsb_encode(medium_file: Path, secret_file: Path, output_file: Path):
-    assert medium_file.suffix.lower() in {
-        ".wav",
-        ".wave",
-    }, "Only WAV audio files are supported"
+    if medium_file.suffix.lower() not in {".wav", ".wave"}:
+        raise ValueError("Only WAV audio files are supported")
 
     with open(0 if str(secret_file) == "-" else secret_file, "rb") as secret_file:
         secret_data = secret_file.read()
@@ -33,10 +31,8 @@ def audio_lsb_encode(medium_file: Path, secret_file: Path, output_file: Path):
 
 
 def audio_lsb_decode(medium_file: Path, output_file: Path):
-    assert medium_file.suffix.lower() in {
-        ".wav",
-        ".wave",
-    }, "Only WAV audio files are supported"
+    if medium_file.suffix.lower() not in {".wav", ".wave"}:
+        raise ValueError("Only WAV audio files are supported")
 
     params, frames = read_wave(str(medium_file))
     secret_queue = lsb_decode_sized(frames, count=2)

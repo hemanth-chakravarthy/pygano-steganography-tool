@@ -1,2 +1,30 @@
-/data
-__pycache__
+# Python virtual environment
+.venv/
+venv/
+ENV/
+env/
+
+# Python caching & bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables & configuration secrets
+.env
+.env.local
+.env.*
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Operating System specific
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Steganography local output files (to avoid committing large test files)
+/data/
+decoded_*
+stego_*
+*.bin

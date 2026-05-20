@@ -48,7 +48,32 @@
 
 ---
 
-## Usage Guide
+## Web Interface
+
+`pygano` includes a gorgeous, serverless client-side web interface. It runs entirely in your browser using the HTML5 Canvas, Web Audio, and File APIs. No data is sent to any server, guaranteeing complete privacy.
+
+### How to Run the Web UI
+
+1. **Start a local web server**:
+   From the project directory, run Python's built-in HTTP server:
+   ```bash
+   python -m http.server 8000
+   ```
+
+2. **Open the browser**:
+   Navigate to:
+   [http://localhost:8000](http://localhost:8000) (or double-click the `index.html` file to open it directly).
+
+### Key Web Features
+- **Interactive Drag & Drop**: Drop container files and secrets directly into the interface.
+- **Real-time Capacity Gauge**: Automatically calculates the storage limit of your container images or audio files, showing a progress indicator of the space your secret will take.
+- **Typing Shortcuts**: You can choose to type a text message directly as the secret, instead of uploading a file.
+- **Safe Downloading**: Generated stego files are automatically downloaded via the browser.
+
+---
+
+## Usage Guide (Command Line)
+
 
 The tool determines the type of steganography automatically based on the file extension of the medium container file.
 
