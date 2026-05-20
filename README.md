@@ -1,168 +1,160 @@
 # pygano
 
-`pygano` is a Python-based ensemble steganography tool that allows you to hide secret files inside common medium formats (images, audio files, and text) using Least Significant Bit (LSB) and Unicode steganography.
+`pygano` is an ensemble steganography tool that hides secret files inside common media formats using **Least Significant Bit (LSB)** and **Unicode zero-width space (ZWSP)** steganography.
+
+It ships with a **100% client-side web interface** — no server, no uploads, complete privacy — deployed live at:
+
+> **🔗 [https://pygano-steganography-tool-6l33.vercel.app/](https://pygano-steganography-tool-6l33.vercel.app/)**
 
 ---
 
 ## Features
 
 - **Multi-Format Support**:
-  - **Images**: Hide secrets in images (`.png`, `.bmp`, `.jpg`, `.jpeg`, `.tiff`, `.gif`).
-  - **Audio**: Hide secrets in WAVE audio files (`.wav`, `.wave`).
-  - **Plain Text**: Hide text secrets in other text files (`.txt`) using zero-width spaces (ZWSP) Unicode characters.
-- **Pipelining**: Support for reading from `stdin` and writing to `stdout` by using `-` as a file path.
-- **Uniform binary I/O** powered by a custom `BitQueue` implementation.
+  - 🖼️ **Images**: Hide secrets in PNG, BMP, JPG/JPEG, TIFF, GIF containers.
+  - 🔊 **Audio**: Hide secrets in WAV/WAVE audio files.
+  - 📝 **Plain Text**: Hide secrets inside `.txt` files using invisible zero-width Unicode characters (ZWSP).
+- **Web Interface**: Fully serverless browser-based UI — drag & drop files, encode, and download your stego output, all without leaving your browser.
+- **Auto File-Type Detection**: Automatically detects the container type (image, audio, text) when you drop a file — no manual selection required.
+- **Real-Time Capacity Gauge**: Shows how much of the container's steganographic capacity your secret payload uses.
+- **Python CLI**: Command-line interface with support for `stdin`/`stdout` piping for use in encryption pipelines.
+- **Security Hardened**: Input validation, Content Security Policy, and buffer boundary checks throughout.
 
 ---
 
-## Installation
+## Web Interface (Recommended)
+
+### Live Demo
+> **[https://pygano-steganography-tool-6l33.vercel.app/](https://pygano-steganography-tool-6l33.vercel.app/)**
+
+No installation required. Open the link and use it directly in your browser.
+
+### Run Locally
+
+1. Clone the repository and serve it with Python's built-in HTTP server:
+   ```bash
+   git clone https://github.com/hemanth-chakravarthy/pygano-steganography-tool.git
+   cd pygano-steganography-tool
+   python -m http.server 8000
+   ```
+2. Open your browser and navigate to [http://localhost:8000](http://localhost:8000).
+
+### How to Use the Web Interface
+
+**Encode (Hide a Secret)**
+1. Drop or click to upload your **container file** (image, audio, or text). The file type is auto-detected.
+2. Choose your secret — type a **text message** directly, or upload any **secret file**.
+3. Watch the **capacity bar** to ensure your secret fits inside the container.
+4. Click **Encode & Download Container** — the stego file is downloaded directly to your device.
+
+**Decode (Extract a Secret)**
+1. Switch to the **Decode** tab.
+2. Drop or upload the stego container file. The file type is auto-detected.
+3. Click **Extract & Decode Secret** — the decoded payload is shown on screen or downloaded.
+
+> [!NOTE]
+> All processing happens entirely in your browser using the HTML5 Canvas, Web Audio, and File APIs. Your files are never uploaded to any server.
+
+---
+
+## Python CLI
 
 ### Prerequisites
 - Python 3.12 or newer.
 
-### Setting Up a Virtual Environment (Recommended)
+### Installation
 
 1. **Create a virtual environment**:
-   ```powershell
+   ```bash
    python -m venv .venv
    ```
 
 2. **Activate the virtual environment**:
-   * **Windows (PowerShell)**:
-     ```powershell
-     .\.venv\Scripts\Activate.ps1
-     ```
-   * **Windows (CMD)**:
-     ```cmd
-     .\.venv\Scripts\activate.bat
-     ```
-   * **Linux/macOS**:
-     ```bash
-     source .venv/bin/activate
-     ```
+   - **Windows (PowerShell)**: `.\.venv\Scripts\Activate.ps1`
+   - **Windows (CMD)**: `.\.venv\Scripts\activate.bat`
+   - **Linux/macOS**: `source .venv/bin/activate`
 
-3. **Install Dependencies**:
+3. **Install dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
 
----
+### Encoding (Hiding a Secret)
 
-## Web Interface
-
-`pygano` includes a gorgeous, serverless client-side web interface. It runs entirely in your browser using the HTML5 Canvas, Web Audio, and File APIs. No data is sent to any server, guaranteeing complete privacy.
-
-### How to Run the Web UI
-
-1. **Start a local web server**:
-   From the project directory, run Python's built-in HTTP server:
-   ```bash
-   python -m http.server 8000
-   ```
-
-2. **Open the browser**:
-   Navigate to:
-   [http://localhost:8000](http://localhost:8000) (or double-click the `index.html` file to open it directly).
-
-### Key Web Features
-- **Interactive Drag & Drop**: Drop container files and secrets directly into the interface.
-- **Real-time Capacity Gauge**: Automatically calculates the storage limit of your container images or audio files, showing a progress indicator of the space your secret will take.
-- **Typing Shortcuts**: You can choose to type a text message directly as the secret, instead of uploading a file.
-- **Safe Downloading**: Generated stego files are automatically downloaded via the browser.
-
----
-
-## Usage Guide (Command Line)
-
-
-The tool determines the type of steganography automatically based on the file extension of the medium container file.
-
-### 1. Encoding (Hiding a Secret)
-
-To hide a secret file within a medium file, run the command with three arguments:
 ```bash
 python pygano.py <medium_file> <secret_file> <output_file>
 ```
 
-#### Important note on JPEG images:
 > [!WARNING]
-> While you can use a lossy image format (like `.jpg` or `.jpeg`) as the **input** medium container, you must save the **output** file in a **lossless** format (like `.png` or `.bmp`). Saving the output as a JPEG will run compression on the image and corrupt your hidden data.
+> If using a JPEG/JPG image as the **input** container, the **output** must be saved as a lossless format (`.png` or `.bmp`). Saving as JPEG re-compresses the image and destroys the hidden LSB data.
 
-#### Examples:
-* **Hiding a text file in a Wave Audio file**:
-  ```bash
-  python pygano.py data/song.wav data/secret.txt output_song.wav
-  ```
-* **Hiding a file in a JPEG (saving to lossless PNG)**:
-  ```bash
-  python pygano.py input.jpg secret.txt stego_image.png
-  ```
-* **Hiding text in a text file**:
-  ```bash
-  python pygano.py cover.txt secret.txt stego_text.txt
-  ```
-
----
-
-### 2. Decoding (Extracting a Secret)
-
-To extract a hidden secret from a medium container, run the command with two arguments:
+**Examples:**
 ```bash
-python pygano.py <medium_file_with_secret> <output_secret_file>
+# Hide a secret in a PNG image
+python pygano.py cover.png secret.txt stego.png
+
+# Hide a secret in a JPEG (save output as PNG)
+python pygano.py photo.jpg secret.txt stego.png
+
+# Hide a secret in a WAV audio file
+python pygano.py song.wav secret.txt stego.wav
+
+# Hide a secret in a text file
+python pygano.py cover.txt secret.txt stego.txt
 ```
 
-#### Examples:
-* **Extracting a secret from a Wave Audio file**:
-  ```bash
-  python pygano.py output_song.wav extracted_secret.txt
-  ```
-* **Extracting a secret from a PNG image**:
-  ```bash
-  python pygano.py stego_image.png extracted_secret.txt
-  ```
-* **Extracting a secret from a text file**:
-  ```bash
-  python pygano.py stego_text.txt extracted_secret.txt
-  ```
+### Decoding (Extracting a Secret)
 
----
+```bash
+python pygano.py <stego_file> <output_file>
+```
 
-## Advanced Usage (Piping & Encryption)
+**Examples:**
+```bash
+python pygano.py stego.png extracted.txt
+python pygano.py stego.wav extracted.txt
+python pygano.py stego.txt extracted.txt
+```
 
-Since `pygano` supports standard streams via the `-` argument, you can easily combine it with other terminal utilities for compression or encryption.
+### Piping (Advanced)
 
-### Piping Encrypted Data with `age`
+Use `-` as a file path to read from `stdin` or write to `stdout`. This enables chaining with encryption tools:
 
-* **Encoding an encrypted secret**:
-  ```bash
-  age -e -r age1f0muf5szgy3z0y5yddhq7c5af6sl3djupa0xhkurnk2mugzvxdus47qczf data/secret.txt | python pygano.py data/magic.png - stego_magic.png
-  ```
-* **Decoding and decrypting**:
-  ```bash
-  python pygano.py stego_magic.png - | age -d -i data/age_key.txt
-  ```
+```bash
+# Encrypt and hide in one pipeline
+age -e -r <recipient-key> secret.txt | python pygano.py cover.png - stego.png
 
-### Archiving, Compressing, Encrypting, and Hiding
-
-* **Encoding multiple files**:
-  ```bash
-  tar cvz data/secret.txt data/text_medium.txt | age -e -r age1f0muf5szgy3z0y5yddhq7c5af6sl3djupa0xhkurnk2mugzvxdus47qczf | python pygano.py data/magic.png - stego_magic.png
-  ```
-* **Decoding and extracting files**:
-  ```bash
-  python pygano.py stego_magic.png - | age -d -i data/age_key.txt | tar xvz -C /tmp/
-  ```
+# Extract and decrypt in one pipeline
+python pygano.py stego.png - | age -d -i key.txt
+```
 
 ---
 
 ## Project Structure
 
-- **[pygano.py](file:///d:/pygano/pygano.py)**: The main command-line entry point. Handles arguments and dispatches tasks.
-- **[image.py](file:///d:/pygano/image.py)**: Image-based LSB steganography implementation using `Pillow`.
-- **[audio.py](file:///d:/pygano/audio.py)**: Audio-based LSB steganography implementation for WAVE files.
-- **[text.py](file:///d:/pygano/text.py)**: Text-based steganography using zero-width space characters.
-- **[lsb.py](file:///d:/pygano/lsb.py)**: Utility functions for encoding/decoding bits into bytes.
-- **[bit_queue.py](file:///d:/pygano/bit_queue.py)**: A custom binary/bit stream helper class.
+| File | Description |
+|---|---|
+| `index.html` | Web interface layout |
+| `index.css` | Web interface styles (monochrome light theme) |
+| `index.js` | Client-side steganography engine (BitQueue, LSB, ZWSP, WAV parser) |
+| `pygano.py` | Python CLI entry point |
+| `image.py` | Image LSB steganography via Pillow |
+| `audio.py` | Audio LSB steganography for WAV files |
+| `text.py` | Text ZWSP steganography |
+| `lsb.py` | LSB encode/decode utility functions |
+| `bit_queue.py` | Custom bit-stream helper class |
+| `vercel.json` | Vercel static deployment configuration |
+
+---
+
+## Deployment
+
+The web interface is deployed as a **static site on Vercel**.
+
+To deploy your own fork:
+1. Push to GitHub.
+2. Import the repository into [Vercel](https://vercel.com).
+3. Vercel will use `vercel.json` to correctly detect the project as a static site (bypassing Python auto-detection).
 
 ---
 
@@ -170,10 +162,13 @@ Since `pygano` supports standard streams via the `-` argument, you can easily co
 
 - [x] `BitQueue` data-structure for uniform binary I/O
 - [x] Image LSB steganography for lossless formats
-- [x] Audio LSB steganography for WAVE format
-- [x] Plain text steganography using ZWSP, zero-width space, Unicode characters
-- [x] Support reading and writing from and to stdin and stdout if `-` is provided as path
-- [x] Test pipelining
-- [ ] Support other lossless audio formats
-- [ ] Support more uncommon lossless image formats
-- [ ] Support lossy audio and image formats
+- [x] JPEG input support (lossless PNG/BMP output enforced)
+- [x] Audio LSB steganography for WAV format
+- [x] Plain text steganography using ZWSP Unicode characters
+- [x] stdin/stdout piping support
+- [x] Serverless client-side web interface
+- [x] Auto file-type detection in the web UI
+- [x] Security hardening (CSP, input validation, proper error handling)
+- [x] Vercel deployment
+- [ ] Support other lossless audio formats (FLAC)
+- [ ] Support more lossless image formats
